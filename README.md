@@ -9,7 +9,8 @@ The client sections mirror the sections of the [official documentation](https://
 ## Install
 
 ```bash
-bun install
+npm install @shevernitskiy/evotor
+bun install @shevernitskiy/evotor
 ```
 
 ## Usage
