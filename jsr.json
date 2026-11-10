@@ -1,0 +1,15 @@
+{
+  "name": "@shevernitskiy/evotor",
+  "version": "0.1.0",
+  "exports": "./index.ts",
+  "exclude": [
+    "npm",
+    "node_modules",
+    "scripts",
+    "tests",
+    "run.ts",
+    ".github",
+    "tsconfig.json",
+    "package.json"
+  ]
+}

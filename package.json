@@ -1,0 +1,29 @@
+{
+  "name": "@shevernitskiy/evotor",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Evotor API client",
+  "license": "MIT",
+  "author": "shevernitskiy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shevernitskiy/evotor"
+  },
+  "type": "module",
+  "module": "index.ts",
+  "scripts": {
+    "start": "bun run ./run.ts",
+    "dev": "bun --watch ./run.ts",
+    "test": "bun test",
+    "typecheck": "bun check",
+    "format": "bun fmt",
+    "version": "bun run ./scripts/project-version.ts",
+    "build:npm": "bun run ./scripts/build-npm.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
+}
