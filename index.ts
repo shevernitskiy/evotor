@@ -1,10 +1,11 @@
 export { Evotor } from "./src/evotor.ts";
+export { ApiV1 } from "./src/api/v1/api.ts";
+export { ApiV2 } from "./src/api/v2/api.ts";
 export { ApiError } from "./src/errors/api.ts";
 export { AuthError } from "./src/errors/auth.ts";
 export { HttpError } from "./src/errors/http.ts";
-export * from "./src/api/account/types.ts";
-export * from "./src/api/ofd/types.ts";
-export * from "./src/api/products/types.ts";
-export * from "./src/typings/entities.ts";
+export { NotInstalledError } from "./src/errors/not-installed.ts";
 export * from "./src/typings/lib.ts";
 export * from "./src/typings/webhooks.ts";
+export * as v1 from "./src/api/v1/index.ts";
+export * as v2 from "./src/api/v2/index.ts";

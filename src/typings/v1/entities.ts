@@ -1,4 +1,4 @@
-import type { JSONValue } from "./lib.ts";
+import type { JSONValue } from "../lib.ts";
 
 /** Единица измерения товара. */
 export type MeasureName = "" | "шт" | "кг" | "л" | "м" | "км" | "м2" | "м3" | "компл" | "упак" | "ед" | "дроб";

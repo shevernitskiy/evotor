@@ -1,5 +1,5 @@
-import { Endpoint } from "../../core/endpoint.ts";
-import type { ResponseGetDevices, ResponseGetEmployees, ResponseGetStores } from "./types.ts";
+import { Endpoint } from "../../../core/endpoint.ts";
+import type { Device, Employee, Store } from "../../../typings/v1/entities.ts";
 
 /**
  * Сущности пользователя Эвотор: магазины, сотрудники и смарт-терминалы.
@@ -12,8 +12,8 @@ export class AccountApi extends Endpoint {
    *
    * `GET /api/v1/inventories/stores/search`
    */
-  getStores(): Promise<ResponseGetStores> {
-    return this.rest.get<ResponseGetStores>({
+  getStores(): Promise<Store[]> {
+    return this.rest.get<Store[]>({
       url: "/api/v1/inventories/stores/search",
     });
   }
@@ -24,8 +24,8 @@ export class AccountApi extends Endpoint {
    *
    * `GET /api/v1/inventories/employees/search`
    */
-  getEmployees(): Promise<ResponseGetEmployees> {
-    return this.rest.get<ResponseGetEmployees>({
+  getEmployees(): Promise<Employee[]> {
+    return this.rest.get<Employee[]>({
       url: "/api/v1/inventories/employees/search",
     });
   }
@@ -35,8 +35,8 @@ export class AccountApi extends Endpoint {
    *
    * `GET /api/v1/inventories/devices/search`
    */
-  getDevices(): Promise<ResponseGetDevices> {
-    return this.rest.get<ResponseGetDevices>({
+  getDevices(): Promise<Device[]> {
+    return this.rest.get<Device[]>({
       url: "/api/v1/inventories/devices/search",
     });
   }

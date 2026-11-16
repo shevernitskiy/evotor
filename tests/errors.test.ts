@@ -11,7 +11,7 @@ test("401 и 403 выбрасывают AuthError", async () => {
   const evotor = new Evotor("test-token", { fetch: fetcher });
 
   try {
-    await evotor.account.getStores();
+    await evotor.v1.account.getStores();
     throw new Error("Expected AuthError");
   } catch (error) {
     expect(error).toBeInstanceOf(AuthError);
@@ -19,7 +19,7 @@ test("401 и 403 выбрасывают AuthError", async () => {
   }
 
   try {
-    await evotor.account.getStores();
+    await evotor.v1.account.getStores();
     throw new Error("Expected AuthError");
   } catch (error) {
     expect(error).toBeInstanceOf(AuthError);
@@ -33,7 +33,7 @@ test("ответ с errors выбрасывает ApiError", async () => {
   const evotor = new Evotor("test-token", { fetch: fetcher });
 
   try {
-    await evotor.account.getStores();
+    await evotor.v1.account.getStores();
     throw new Error("Expected ApiError");
   } catch (error) {
     expect(error).toBeInstanceOf(ApiError);
@@ -46,7 +46,7 @@ test("ошибка без json выбрасывает HttpError", async () => {
   const evotor = new Evotor("test-token", { fetch: fetcher });
 
   try {
-    await evotor.account.getStores();
+    await evotor.v1.account.getStores();
     throw new Error("Expected HttpError");
   } catch (error) {
     expect(error).toBeInstanceOf(HttpError);
@@ -58,7 +58,7 @@ test("пустой ответ без содержимого возвращает
   const { fetcher } = mockFetch(new Response(null, { status: 204 }));
   const evotor = new Evotor("test-token", { fetch: fetcher });
 
-  expect(await evotor.products.uploadProducts("s-1", [])).toBeUndefined();
+  expect(await evotor.v1.products.uploadProducts("s-1", [])).toBeUndefined();
 });
 
 test("пустой токен не принимается", () => {

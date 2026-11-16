@@ -1,8 +1,14 @@
 import { ApiError } from "../errors/api.ts";
 import { AuthError } from "../errors/auth.ts";
 import { HttpError } from "../errors/http.ts";
+import { NotInstalledError } from "../errors/not-installed.ts";
 import type { HttpMethod, JSONValue, Options, QueryValue, RequestInit } from "../typings/lib.ts";
 import { RateLimiter } from "./rate-limiter.ts";
+
+export type ApiVersion = "v1" | "v2";
+
+const V2_CONTENT_TYPE = "application/vnd.evotor.v2+json";
+const V2_BULK_CONTENT_TYPE = "application/vnd.evotor.v2+bulk+json";
 
 export class RestClient {
   private readonly base_url = "https://api.evotor.ru";
@@ -10,12 +16,19 @@ export class RestClient {
   private readonly fetcher: typeof fetch;
   private readonly limiter = new RateLimiter();
 
-  constructor(token: string, options: Options = {}) {
+  constructor(token: string, options: Options = {}, version: ApiVersion = "v1") {
     if (token.trim() === "") throw new TypeError("Evotor token is required");
-    this.headers = {
-      "X-Authorization": token,
-      "Content-Type": "application/json",
-    };
+    this.headers =
+      version === "v2"
+        ? {
+            "Authorization": `Bearer ${token}`,
+            "Accept": V2_CONTENT_TYPE,
+            "Content-Type": V2_CONTENT_TYPE,
+          }
+        : {
+            "X-Authorization": token,
+            "Content-Type": "application/json",
+          };
     this.fetcher = options.fetch ?? globalThis.fetch;
   }
 
@@ -25,9 +38,12 @@ export class RestClient {
 
     const query = this.buildQuery(init.query);
     const target = `${this.base_url}${init.url}${query}`;
+    const headers = { ...this.headers };
+    if (init.content_type === "bulk") headers["Content-Type"] = V2_BULK_CONTENT_TYPE;
+
     const response = await this.fetcher(target, {
       method,
-      headers: this.headers,
+      headers,
       body: init.payload === undefined ? undefined : JSON.stringify(init.payload),
     });
 
@@ -87,6 +103,12 @@ export class RestClient {
     const message = `${response.status} ${response.statusText}`.trim();
     if (response.status === 401 || response.status === 403) {
       return new AuthError(data, message);
+    }
+    if (response.status === 402) {
+      return new NotInstalledError(data, message);
+    }
+    if (Array.isArray(data)) {
+      return new ApiError(data, message);
     }
     if (typeof data === "object" && data !== null && "errors" in data) {
       return new ApiError(data, message);

@@ -8,6 +8,7 @@ export type RequestInit = {
   url: string;
   query?: Record<string, QueryValue>;
   payload?: JSONValue;
+  content_type?: "bulk";
 };
 
 export type Options = {
@@ -15,4 +16,6 @@ export type Options = {
   fetch?: typeof fetch;
   /** Токен ОФД для раздела «Данные ОФД». Если не задан, используется основной токен. */
   ofd_token?: string;
+  /** Токен для API Облака V2. Если не задан, используется основной токен. */
+  v2_token?: string;
 };

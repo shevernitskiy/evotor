@@ -1,10 +1,5 @@
-import { Endpoint } from "../../core/endpoint.ts";
-import type {
-  RequestGetOfdDocuments,
-  ResponseGetOfdDevices,
-  ResponseGetOfdDocuments,
-  ResponseGetOfdStores,
-} from "./types.ts";
+import { Endpoint } from "../../../core/endpoint.ts";
+import type { OfdDevice, OfdDocument, OfdDocumentType, OfdResponse, OfdStore } from "../../../typings/v1/entities.ts";
 
 /**
  * Данные ОФД: магазины, смарт-терминалы и документы, переданные в ОФД.
@@ -19,8 +14,8 @@ export class OfdApi extends Endpoint {
    *
    * `GET /api/v1/ofd/stores`
    */
-  getStores(): Promise<ResponseGetOfdStores> {
-    return this.rest.get<ResponseGetOfdStores>({
+  getStores(): Promise<OfdResponse<OfdStore[]>> {
+    return this.rest.get<OfdResponse<OfdStore[]>>({
       url: "/api/v1/ofd/stores",
     });
   }
@@ -30,8 +25,8 @@ export class OfdApi extends Endpoint {
    *
    * `GET /api/v1/ofd/devices`
    */
-  getDevices(): Promise<ResponseGetOfdDevices> {
-    return this.rest.get<ResponseGetOfdDevices>({
+  getDevices(): Promise<OfdResponse<OfdDevice[]>> {
+    return this.rest.get<OfdResponse<OfdDevice[]>>({
       url: "/api/v1/ofd/devices",
     });
   }
@@ -45,10 +40,22 @@ export class OfdApi extends Endpoint {
    * `GET /api/v1/ofd/documents/{storeId}`
    *
    * @param storeId Идентификатор магазина, полученный из запроса «Получение иерархии магазинов из ОФД», в формате `\d+`.
-   * @param params Параметры выборки документов: смарт-терминал, период и тип документа.
+   * @param params Параметры выборки документов.
+   * @param params.deviceId Идентификатор смарт-терминала, полученный из запроса «Получение иерархии касс из ОФД», в формате `\d+`.
+   * @param params.from Начало интервала выборки для выгрузки документов. Формат даты – ISO-8601. Выборка не может превышать семи дней.
+   * @param params.to Конец интервала выборки для выгрузки документов. Формат даты – ISO-8601. Выборка не может превышать семи дней.
+   * @param params.type Тип документа для выгрузки из ОФД. Доступны только `SELL` (кассовые документы) и `Z_REPORT` (z-отчёт).
    */
-  getDocuments(storeId: string, params: RequestGetOfdDocuments): Promise<ResponseGetOfdDocuments> {
-    return this.rest.get<ResponseGetOfdDocuments>({
+  getDocuments(
+    storeId: string,
+    params: {
+      deviceId: string;
+      from: string;
+      to: string;
+      type: OfdDocumentType;
+    },
+  ): Promise<OfdResponse<OfdDocument[]>> {
+    return this.rest.get<OfdResponse<OfdDocument[]>>({
       url: `/api/v1/ofd/documents/${encodeURIComponent(storeId)}`,
       query: {
         deviceId: params.deviceId,

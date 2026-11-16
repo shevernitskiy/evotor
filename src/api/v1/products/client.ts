@@ -1,24 +1,13 @@
-import { Endpoint } from "../../core/endpoint.ts";
-import type { JSONValue } from "../../typings/lib.ts";
+import { Endpoint } from "../../../core/endpoint.ts";
+import type { JSONValue } from "../../../typings/lib.ts";
 import type {
-  RequestDeleteExtras,
-  RequestDeleteProducts,
-  RequestDeleteSchemes,
-  RequestGetDocuments,
-  RequestUploadExtras,
-  RequestUploadProducts,
-  RequestUploadSchemes,
-  ResponseDeleteExtras,
-  ResponseDeleteProducts,
-  ResponseDeleteSchemes,
-  ResponseGetDocuments,
-  ResponseGetExtras,
-  ResponseGetProducts,
-  ResponseGetSchemes,
-  ResponseUploadExtras,
-  ResponseUploadProducts,
-  ResponseUploadSchemes,
-} from "./types.ts";
+  Document,
+  DocumentType,
+  Product,
+  ProductExtra,
+  ProductSchema,
+  ProductToDelete,
+} from "../../../typings/v1/entities.ts";
 
 /**
  * Товары и документы, схемы и дополнительные поля товаров.
@@ -33,8 +22,8 @@ export class ProductsApi extends Endpoint {
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    */
-  getProducts(storeUuid: string): Promise<ResponseGetProducts> {
-    return this.rest.get<ResponseGetProducts>({
+  getProducts(storeUuid: string): Promise<Product[]> {
+    return this.rest.get<Product[]>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products`,
     });
   }
@@ -49,8 +38,8 @@ export class ProductsApi extends Endpoint {
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    * @param products Массив товаров, которые требуется передать в магазин.
    */
-  uploadProducts(storeUuid: string, products: RequestUploadProducts): Promise<ResponseUploadProducts> {
-    return this.rest.post<ResponseUploadProducts>({
+  uploadProducts(storeUuid: string, products: Product[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products`,
       payload: products as JSONValue,
     });
@@ -67,8 +56,8 @@ export class ProductsApi extends Endpoint {
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    * @param products Массив товаров, которые требуется удалить. Пустой массив удаляет все товары магазина.
    */
-  deleteProducts(storeUuid: string, products: RequestDeleteProducts): Promise<ResponseDeleteProducts> {
-    return this.rest.post<ResponseDeleteProducts>({
+  deleteProducts(storeUuid: string, products: ProductToDelete[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/delete`,
       payload: products as JSONValue,
     });
@@ -85,9 +74,21 @@ export class ProductsApi extends Endpoint {
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    * @param params Параметры выборки документов.
+   * @param params.deviceUuid Идентификатор устройства в Облаке Эвотор. Формат – `uuid4`, в соответствии с RFC 4122. Регистрозависимый.
+   * @param params.ltCloseDate Дата окончания выборки. Ответ содержит документы, созданные до указанной даты. Формат времени — 2017-01-10T09:33:19.757+0000.
+   * @param params.gtCloseDate Дата начала выборки. Ответ содержит документы, созданные после указанной даты. Формат времени — 2017-01-10T09:33:19.757+0000.
+   * @param params.types Ответ будет содержать документы определённых типов. Можно указать несколько типов через запятую.
    */
-  getDocuments(storeUuid: string, params?: RequestGetDocuments): Promise<ResponseGetDocuments> {
-    return this.rest.get<ResponseGetDocuments>({
+  getDocuments(
+    storeUuid: string,
+    params?: {
+      deviceUuid?: string;
+      ltCloseDate?: string;
+      gtCloseDate?: string;
+      types?: DocumentType[];
+    },
+  ): Promise<Document[]> {
+    return this.rest.get<Document[]>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/documents`,
       query: {
         deviceUuid: params?.deviceUuid,
@@ -108,8 +109,8 @@ export class ProductsApi extends Endpoint {
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    */
-  getSchemes(storeUuid: string): Promise<ResponseGetSchemes> {
-    return this.rest.get<ResponseGetSchemes>({
+  getSchemes(storeUuid: string): Promise<ProductSchema[]> {
+    return this.rest.get<ProductSchema[]>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/schemes`,
     });
   }
@@ -125,8 +126,8 @@ export class ProductsApi extends Endpoint {
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    * @param schemas Массив значений схемы.
    */
-  uploadSchemes(storeUuid: string, schemas: RequestUploadSchemes): Promise<ResponseUploadSchemes> {
-    return this.rest.post<ResponseUploadSchemes>({
+  uploadSchemes(storeUuid: string, schemas: ProductSchema[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/schemes`,
       payload: schemas as JSONValue,
     });
@@ -140,10 +141,10 @@ export class ProductsApi extends Endpoint {
    * `POST /api/v1/inventories/stores/{storeUuid}/products/schemes/delete`
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
-   * @param schemas Массив идентификаторов схем. Формат – `uuid4`, уникальный в рамках приложения.
+   * @param schemas Массив идентификаторов схем, которые требуется удалить. Формат – `uuid4`, уникальный в рамках приложения.
    */
-  deleteSchemes(storeUuid: string, schemas: RequestDeleteSchemes): Promise<ResponseDeleteSchemes> {
-    return this.rest.post<ResponseDeleteSchemes>({
+  deleteSchemes(storeUuid: string, schemas: string[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/schemes/delete`,
       payload: schemas as JSONValue,
     });
@@ -156,22 +157,22 @@ export class ProductsApi extends Endpoint {
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    */
-  getExtras(storeUuid: string): Promise<ResponseGetExtras> {
-    return this.rest.get<ResponseGetExtras>({
+  getExtras(storeUuid: string): Promise<ProductExtra[]> {
+    return this.rest.get<ProductExtra[]>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/extras`,
     });
   }
 
   /**
-   * Создаёт / изменяет дополнительные поля товаров в определённом магазине (`storeUuid`) пользователя платформы.
+   * Создаёт / изменяет дополнительные поля товаров для определённого магазина (`storeUuid`) пользователя платформы.
    *
    * `POST /api/v1/inventories/stores/{storeUuid}/products/extras`
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
    * @param extras Массив дополнительных полей.
    */
-  uploadExtras(storeUuid: string, extras: RequestUploadExtras): Promise<ResponseUploadExtras> {
-    return this.rest.post<ResponseUploadExtras>({
+  uploadExtras(storeUuid: string, extras: ProductExtra[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/extras`,
       payload: extras as JSONValue,
     });
@@ -185,10 +186,10 @@ export class ProductsApi extends Endpoint {
    * `POST /api/v1/inventories/stores/{storeUuid}/products/extras/delete`
    *
    * @param storeUuid Идентификатор магазина в Облаке Эвотор, в рамках которого действует запрос. Формат – `uuid4`.
-   * @param extras Массив идентификаторов дополнительных полей. Формат – `uuid4`, уникальный в рамках приложения.
+   * @param extras Массив идентификаторов дополнительных полей, которые требуется удалить. Формат – `uuid4`, уникальный в рамках приложения.
    */
-  deleteExtras(storeUuid: string, extras: RequestDeleteExtras): Promise<ResponseDeleteExtras> {
-    return this.rest.post<ResponseDeleteExtras>({
+  deleteExtras(storeUuid: string, extras: string[]): Promise<void> {
+    return this.rest.post<void>({
       url: `/api/v1/inventories/stores/${encodeURIComponent(storeUuid)}/products/extras/delete`,
       payload: extras as JSONValue,
     });

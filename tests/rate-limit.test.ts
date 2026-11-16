@@ -12,8 +12,8 @@ test("клиент ждёт до reset, когда предыдущий отве
   const evotor = new Evotor("test-token", { fetch: fetcher });
 
   const started = Date.now();
-  await evotor.account.getStores();
-  await evotor.account.getStores();
+  await evotor.v1.account.getStores();
+  await evotor.v1.account.getStores();
 
   expect(calls.length).toBe(2);
   expect(Date.now() - started).toBeGreaterThanOrEqual(40);

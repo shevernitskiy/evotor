@@ -1,5 +1,5 @@
-import type { Device, Document, Employee, MeasureName, ProductType, Store } from "./entities.ts";
 import type { JSONValue } from "./lib.ts";
+import type { Device, Document, Employee, MeasureName, ProductType, Store } from "./v1/entities.ts";
 
 /**
  * Типы входящих вебхуков Эвотор.
