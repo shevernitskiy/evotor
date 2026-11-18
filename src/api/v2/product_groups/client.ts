@@ -70,9 +70,28 @@ export class ProductGroupsApi extends Endpoint {
   }
 
   /**
+   * Создаёт несколько групп товаров.
+   *
+   * Запрос выполняется как массовая операция.
+   * Состояние задачи доступно через раздел «Задачи для массовых операций».
+   *
+   * `POST /stores/{store-id}/product-groups`
+   *
+   * @param storeId Идентификатор магазина в Облаке Эвотор.
+   * @param groups Массив групп товаров.
+   */
+  createProductGroups(storeId: string, groups: ProductGroup[]): Promise<Bulk> {
+    return this.rest.post<Bulk>({
+      url: `/stores/${encodeURIComponent(storeId)}/product-groups`,
+      payload: groups as JSONValue,
+      content_type: "bulk",
+    });
+  }
+
+  /**
    * Создаёт или заменяет несколько групп товаров.
    *
-   * Запрос выполняется как массовая операция — до 1000 групп за раз.
+   * Запрос выполняется как массовая операция.
    * Состояние задачи доступно через раздел «Задачи для массовых операций».
    *
    * `PUT /stores/{store-id}/product-groups`

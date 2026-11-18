@@ -59,6 +59,12 @@ export class RateLimiter {
       this.limits.reset = reset;
       this.resetAt = this.toResetAt(reset);
     }
+
+    const retryAt = this.toRetryAt(headers.get("Retry-After"));
+    if (retryAt !== undefined) {
+      this.limits.remaining = 0;
+      this.resetAt = retryAt;
+    }
   }
 
   private async block(delay: number): Promise<void> {
@@ -75,5 +81,15 @@ export class RateLimiter {
     if (reset > 1_000_000_000_000) return reset;
     if (reset > 1_000_000_000) return reset * 1000;
     return this.now() + reset * 1000;
+  }
+
+  private toRetryAt(value: string | null): number | undefined {
+    if (value === null || value.trim() === "") return undefined;
+
+    const seconds = Number(value);
+    if (Number.isFinite(seconds)) return this.now() + Math.max(0, seconds) * 1000;
+
+    const date = Date.parse(value);
+    return Number.isNaN(date) ? undefined : date;
   }
 }

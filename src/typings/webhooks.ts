@@ -7,8 +7,8 @@ import type { Device, Document, Employee, MeasureName, ProductType, Store } from
  * Облако Эвотор вызывает сторонний сервис по адресам `partner.ru` — пользователь сам организует приём,
  * библиотека даёт только типы payload-ов.
  *
- * Документация: https://api.evotor.ru/docs/#tag/Вебхуки-запросы
- * Документация: https://api.evotor.ru/docs/#tag/Вебхуки-уведомления
+ * Документация: https://developer.evotor.ru/docs/rest_api_webhooks_post_user_verify.html
+ * Документация: https://developer.evotor.ru/docs/rest_api_webhooks_put_stores.html
  */
 
 /** Идентификатор пользователя в Облаке Эвотор. Формат – `[0-9]{2}-[0-9]{15}`. */
@@ -100,14 +100,22 @@ export type WebhookStore = Omit<Store, "code">;
  *
  * `PUT /partner.ru/api/v1/inventories/employees`
  */
-export type WebhookEmployee = Omit<Employee, "code">;
+export type WebhookEmployee = Omit<Employee, "code" | "stores"> & {
+  /** Магазины, к которым привязан сотрудник. В отличие от API, в вебхуке передаются объекты. */
+  stores: { storeUuid: string }[];
+};
 
 /**
  * Смарт-терминал, созданный или изменённый в Личном кабинете.
  *
  * `PUT /partner.ru/api/v1/inventories/devices`
  */
-export type WebhookDevice = Omit<Device, "code">;
+export type WebhookDevice = Omit<Device, "code" | "uuid" | "name"> & {
+  /** Уникальный идентификатор смарт-терминала. */
+  uuid: string;
+  /** Имя смарт-терминала. */
+  name: string;
+};
 
 /**
  * Документ, созданный на смарт-терминале.

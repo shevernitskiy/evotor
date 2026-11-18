@@ -36,7 +36,8 @@ export type MeasureName =
   | "Кбайт"
   | "Мбайт"
   | "Гбайт"
-  | "Тбайт";
+  | "Тбайт"
+  | (string & {});
 
 /** Ставка НДС для товара. */
 export type Tax =
@@ -157,7 +158,7 @@ export type EmployeeCreate = {
   /** Имя сотрудника. */
   name: string;
   /** Фамилия сотрудника. */
-  last_name?: string;
+  last_name: string;
   /** Отчество сотрудника. */
   patronymic_name?: string;
   /** Должность сотрудника. */
@@ -252,19 +253,19 @@ export type Document = {
   /** Идентификатор смены. */
   session_id: string;
   /** Номер смены. */
-  session_number?: number;
+  session_number: number;
   /** Идентификатор сотрудника, закрывшего документ. */
-  close_user_id?: string;
+  close_user_id: string;
   /** Идентификатор смарт-терминала. */
-  device_id?: string;
+  device_id: string;
   /** Идентификатор магазина. */
-  store_id?: string;
+  store_id: string;
   /** Идентификатор пользователя Эвотор. */
-  user_id?: string;
+  user_id: string;
   /** Версия формата документа. */
-  version?: "V1" | "V2";
-  /** Тело документа. */
-  body?: JSONValue;
+  version?: "V2";
+  /** Тело документа. Структура зависит от типа документа. */
+  body: Record<string, JSONValue>;
 };
 
 /** Поля товара, которые можно запросить в ответе. */
@@ -297,7 +298,7 @@ export type ProductField =
 /** Товар или модификация товара. */
 export type Product = {
   /** Тип товара. */
-  type?: ProductType;
+  type: ProductType;
   /** Название товара или модификации товара. */
   name: string;
   /** Код товара или модификации товара. */
@@ -318,6 +319,20 @@ export type Product = {
   barcodes?: string[];
   /** Идентификатор группы, к которой иерархически привязан товар. */
   parent_id?: string;
+  /** Массив кодов алкогольной продукции ЕГАИС. */
+  alcocodes?: string[];
+  /** Крепость алкогольной продукции в объёмных процентах. */
+  alcohol_by_volume?: number;
+  /** Код вида алкогольной продукции согласно классификатору ФСРАР. */
+  alcohol_product_kind_code?: number;
+  /** Ёмкость тары алкогольной продукции в литрах. */
+  tare_volume?: number;
+  /** Классификационный код товара. */
+  classification_code?: string;
+  /** Разрешение частичной продажи товара. */
+  allow_partial_sell?: "NEVER" | "ALWAYS" | "ON_DEMAND";
+  /** Количество товара в упаковке. */
+  quantityInPackage?: number;
   /** Идентификатор товара, уникальный в рамках магазина. */
   id?: string;
   /** Доступный к продаже остаток товара. */
@@ -436,6 +451,19 @@ export type PushNotification = {
 /** Тип события приложения. */
 export type EventType = "Document" | "Product" | "ProductGroup" | "Settings" | "MarketplacePurchase";
 
+/** Действие, которое привело к созданию события. */
+export type EventAction =
+  | "created"
+  | "updated"
+  | "removed"
+  | "Created"
+  | "Activated"
+  | "TermsChanged"
+  | "DeviceAssignmentChanged"
+  | "Renewed"
+  | "CancellationRequested"
+  | "Cancelled";
+
 /** Событие приложения. */
 export type Event = {
   /** Уникальный идентификатор события. */
@@ -445,9 +473,9 @@ export type Event = {
   /** Тип события. */
   type: EventType;
   /** Источник события: смарт-терминал или приложение. */
-  source?: "DEVICE" | "APPLICATION";
+  source: "DEVICE" | "APPLICATION";
   /** Действие, которое привело к созданию события. */
-  action: string;
-  /** Данные события. */
-  payload?: JSONValue;
+  action: EventAction;
+  /** Данные события. Структура зависит от типа события. */
+  payload: Record<string, JSONValue>;
 };

@@ -18,6 +18,7 @@ export class EventsApi extends Endpoint {
    * @param params.since Время в миллисекундах. Ответ содержит события, созданные в указанный момент и позже. Указывается только в первом запросе из серии постраничных запросов.
    * @param params.until Время в миллисекундах. Ответ содержит события, созданные строго до указанного момента. Если параметр не задан, значение определяется как текущая дата.
    * @param params.cursor Идентификатор курсора для постраничного чтения данных. Значение берётся из поля `paging.next_cursor` предыдущего ответа.
+   * @param params.limit Максимальное количество событий в выборке.
    */
   getEvents(
     applicationId: string,
@@ -26,6 +27,7 @@ export class EventsApi extends Endpoint {
       since?: number;
       until?: number;
       cursor?: string;
+      limit?: number;
     },
   ): Promise<Paging<Event>> {
     return this.rest.get<Paging<Event>>({
@@ -35,6 +37,7 @@ export class EventsApi extends Endpoint {
         since: params.since,
         until: params.until,
         cursor: params.cursor,
+        limit: params.limit,
       },
     });
   }

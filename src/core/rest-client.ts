@@ -2,7 +2,7 @@ import { ApiError } from "../errors/api.ts";
 import { AuthError } from "../errors/auth.ts";
 import { HttpError } from "../errors/http.ts";
 import { NotInstalledError } from "../errors/not-installed.ts";
-import type { HttpMethod, JSONValue, Options, QueryValue, RequestInit } from "../typings/lib.ts";
+import type { EvotorRequestInit, HttpMethod, JSONValue, Options, QueryValue } from "../typings/lib.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 export type ApiVersion = "v1" | "v2";
@@ -11,14 +11,21 @@ const V2_CONTENT_TYPE = "application/vnd.evotor.v2+json";
 const V2_BULK_CONTENT_TYPE = "application/vnd.evotor.v2+bulk+json";
 
 export class RestClient {
-  private readonly base_url = "https://api.evotor.ru";
+  private readonly base_url: string;
   private readonly headers: Record<string, string>;
   private readonly fetcher: typeof fetch;
+  private readonly timeout?: number;
+  private readonly signal?: AbortSignal;
   private readonly limiter = new RateLimiter();
 
   constructor(token: string, options: Options = {}, version: ApiVersion = "v1") {
     if (token.trim() === "") throw new TypeError("Evotor token is required");
-    this.headers =
+    if (options.timeout !== undefined && !(Number.isFinite(options.timeout) && options.timeout > 0)) {
+      throw new TypeError("Evotor timeout must be a positive number of milliseconds");
+    }
+
+    this.base_url = (options.base_url ?? "https://api.evotor.ru").replace(/\/+$/, "");
+    const defaults: Record<string, string> =
       version === "v2"
         ? {
             "Authorization": `Bearer ${token}`,
@@ -29,10 +36,13 @@ export class RestClient {
             "X-Authorization": token,
             "Content-Type": "application/json",
           };
+    this.headers = { ...defaults, ...options.headers };
     this.fetcher = options.fetch ?? globalThis.fetch;
+    this.timeout = options.timeout;
+    this.signal = options.signal;
   }
 
-  async request<T>(method: HttpMethod, init: RequestInit): Promise<T> {
+  async request<T>(method: HttpMethod, init: EvotorRequestInit): Promise<T> {
     const pause = this.limiter.wait();
     if (pause !== undefined) await pause;
 
@@ -45,6 +55,7 @@ export class RestClient {
       method,
       headers,
       body: init.payload === undefined ? undefined : JSON.stringify(init.payload),
+      signal: this.createSignal(),
     });
 
     this.limiter.update(response.headers);
@@ -54,27 +65,40 @@ export class RestClient {
     }
 
     const text = await response.text();
-    return (text === "" ? undefined : JSON.parse(text)) as T;
+    if (text === "") return undefined as T;
+
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new HttpError(response.status, text, text);
+    }
   }
 
-  get<T>(init: RequestInit): Promise<T> {
+  get<T>(init: EvotorRequestInit): Promise<T> {
     return this.request<T>("GET", init);
   }
 
-  post<T>(init: RequestInit): Promise<T> {
+  post<T>(init: EvotorRequestInit): Promise<T> {
     return this.request<T>("POST", init);
   }
 
-  put<T>(init: RequestInit): Promise<T> {
+  put<T>(init: EvotorRequestInit): Promise<T> {
     return this.request<T>("PUT", init);
   }
 
-  patch<T>(init: RequestInit): Promise<T> {
+  patch<T>(init: EvotorRequestInit): Promise<T> {
     return this.request<T>("PATCH", init);
   }
 
-  delete<T>(init: RequestInit): Promise<T> {
+  delete<T>(init: EvotorRequestInit): Promise<T> {
     return this.request<T>("DELETE", init);
+  }
+
+  private createSignal(): AbortSignal | undefined {
+    if (this.timeout === undefined) return this.signal;
+
+    const timeout = AbortSignal.timeout(this.timeout);
+    return this.signal === undefined ? timeout : AbortSignal.any([timeout, this.signal]);
   }
 
   private buildQuery(values?: Record<string, QueryValue>): string {
@@ -82,7 +106,7 @@ export class RestClient {
 
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(values)) {
-      if (value === undefined) continue;
+      if (value === undefined || value === null) continue;
       params.set(key, Array.isArray(value) ? value.join(",") : String(value));
     }
 
@@ -101,18 +125,21 @@ export class RestClient {
     }
 
     const message = `${response.status} ${response.statusText}`.trim();
+    const detail =
+      typeof data === "object" && data !== null && !Array.isArray(data) && typeof data.message === "string"
+        ? data.message
+        : undefined;
+    const description = detail === undefined ? message : `${message}: ${detail}`;
+
     if (response.status === 401 || response.status === 403) {
-      return new AuthError(data, message);
+      return new AuthError(response.status, data, description);
     }
     if (response.status === 402) {
-      return new NotInstalledError(data, message);
+      return new NotInstalledError(response.status, data, description);
     }
-    if (Array.isArray(data)) {
-      return new ApiError(data, message);
+    if (typeof data === "object" && data !== null) {
+      return new ApiError(response.status, data, description);
     }
-    if (typeof data === "object" && data !== null && "errors" in data) {
-      return new ApiError(data, message);
-    }
-    return new HttpError(text === "" ? message : text);
+    return new HttpError(response.status, data, text === "" ? message : text);
   }
 }

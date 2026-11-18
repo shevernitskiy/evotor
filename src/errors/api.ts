@@ -2,10 +2,11 @@ import type { JSONValue } from "../typings/lib.ts";
 
 export class ApiError extends Error {
   constructor(
+    public status: number,
     public response: JSONValue,
     message?: string,
   ) {
-    super(message);
+    super(message ?? String(status));
     this.name = "ApiError";
   }
 }

@@ -73,9 +73,28 @@ export class ProductsApi extends Endpoint {
   }
 
   /**
+   * Создаёт несколько товаров.
+   *
+   * Запрос выполняется как массовая операция.
+   * Состояние задачи доступно через раздел «Задачи для массовых операций».
+   *
+   * `POST /stores/{store-id}/products`
+   *
+   * @param storeId Идентификатор магазина в Облаке Эвотор.
+   * @param products Массив товаров.
+   */
+  createProducts(storeId: string, products: Product[]): Promise<Bulk> {
+    return this.rest.post<Bulk>({
+      url: `/stores/${encodeURIComponent(storeId)}/products`,
+      payload: products as JSONValue,
+      content_type: "bulk",
+    });
+  }
+
+  /**
    * Создаёт или заменяет несколько товаров.
    *
-   * Запрос выполняется как массовая операция — до 1000 товаров за раз.
+   * Запрос выполняется как массовая операция.
    * Состояние задачи доступно через раздел «Задачи для массовых операций».
    *
    * `PUT /stores/{store-id}/products`

@@ -96,8 +96,8 @@ const v2Stores = await evotor.v2.stores.getStores();
 const v2Products = await evotor.v2.products.getProducts(v2Stores.items[0]!.id);
 ```
 
-The client is created with a **token** that is passed in the `X-Authorization` header on every request.
-Tokens are issued per application in the Evotor developer account.
+The client is created with a **token**: V1 requests send it in the `X-Authorization` header, V2 requests — in
+`Authorization: Bearer`. Tokens are issued per application in the Evotor developer account.
 
 ---
 
@@ -106,22 +106,22 @@ Tokens are issued per application in the Evotor developer account.
 ```ts
 const evotor = new Evotor(token, options);
 
-evotor.v1.account;   // Сущности пользователя: магазины, сотрудники, смарт-терминалы
-evotor.v1.products;  // Товары, документы, схемы и дополнительные поля
-evotor.v1.ofd;       // Данные ОФД: магазины, смарт-терминалы, документы
-evotor.v1.raw;       // Кастомные запросы к Облаку Эвотор V1
-evotor.v1.ofd_raw;   // Кастомные запросы к ОФД
+evotor.v1.account; // Сущности пользователя: магазины, сотрудники, смарт-терминалы
+evotor.v1.products; // Товары, документы, схемы и дополнительные поля
+evotor.v1.ofd; // Данные ОФД: магазины, смарт-терминалы, документы
+evotor.v1.raw; // Кастомные запросы к Облаку Эвотор V1
+evotor.v1.ofd_raw; // Кастомные запросы к ОФД
 
-evotor.v2.stores;          // Магазины
-evotor.v2.devices;         // Смарт-терминалы
-evotor.v2.employees;       // Сотрудники
-evotor.v2.documents;       // Документы
-evotor.v2.products;        // Товары и модификации товаров
-evotor.v2.product_groups;  // Группы товаров и группы модификаций
-evotor.v2.bulks;           // Задачи для массовых операций
-evotor.v2.push;            // Push-уведомления
-evotor.v2.events;          // События приложения
-evotor.v2.raw;             // Кастомные запросы к API Облака Эвотор V2
+evotor.v2.stores; // Магазины
+evotor.v2.devices; // Смарт-терминалы
+evotor.v2.employees; // Сотрудники
+evotor.v2.documents; // Документы
+evotor.v2.products; // Товары и модификации товаров
+evotor.v2.product_groups; // Группы товаров и группы модификаций
+evotor.v2.bulks; // Задачи для массовых операций
+evotor.v2.push; // Push-уведомления
+evotor.v2.events; // События приложения
+evotor.v2.raw; // Кастомные запросы к API Облака Эвотор V2
 ```
 
 Each section is a separate class with methods named after the API operation, so the code reads like the docs.
@@ -133,18 +133,28 @@ The sections of each version mirror the sections of the corresponding documentat
 ### Constructor options
 
 ```ts
+const controller = new AbortController();
+
 const evotor = new Evotor(token, {
   ofd_token: ofdToken,
   v2_token: v2Token,
   fetch: mockFetch,
+  base_url: "https://proxy.local",
+  headers: { "X-Request-Id": "my-request-id" },
+  timeout: 30_000,
+  signal: controller.signal,
 });
 ```
 
-| Option      | Type              | Description                                                                                   |
-| ----------- | ----------------- | --------------------------------------------------------------------------------------------- |
-| `ofd_token` | `string`          | Token for the OFD section. If omitted, the main token is used.                                |
-| `v2_token`  | `string`          | Token for API Cloud V2. If omitted, the main token is used.                                   |
-| `fetch`     | `typeof fetch`    | Replaces the global `fetch` — useful for tests, mocks and custom transports (proxy, retries).  |
+| Option      | Type                     | Description                                                                                                   |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `ofd_token` | `string`                 | Token for the OFD section. If omitted, the main token is used.                                                |
+| `v2_token`  | `string`                 | Token for API Cloud V2. If omitted, the main token is used.                                                   |
+| `fetch`     | `typeof fetch`           | Replaces the global `fetch` — useful for tests, mocks and custom transports (proxy, retries).                 |
+| `base_url`  | `string`                 | Base URL of the API. Defaults to `https://api.evotor.ru`. Useful for a proxy or a sandbox.                    |
+| `headers`   | `Record<string, string>` | Extra headers that override the default ones (`X-Authorization` / `Authorization`, `Accept`, `Content-Type`). |
+| `timeout`   | `number`                 | Request timeout in milliseconds. The request is aborted when it expires.                                      |
+| `signal`    | `AbortSignal`            | Signal to cancel in-flight requests.                                                                          |
 
 > [!NOTE]
 > V1 requests are authorized with the `X-Authorization` header, V2 requests — with `Authorization: Bearer <token>`
@@ -156,11 +166,11 @@ const evotor = new Evotor(token, {
 
 ### `v1.account` — user entities
 
-| Method          | Endpoint                                      |
-| --------------- | --------------------------------------------- |
-| `getStores()`   | `GET /api/v1/inventories/stores/search`       |
-| `getEmployees()`| `GET /api/v1/inventories/employees/search`    |
-| `getDevices()`  | `GET /api/v1/inventories/devices/search`      |
+| Method           | Endpoint                                   |
+| ---------------- | ------------------------------------------ |
+| `getStores()`    | `GET /api/v1/inventories/stores/search`    |
+| `getEmployees()` | `GET /api/v1/inventories/employees/search` |
+| `getDevices()`   | `GET /api/v1/inventories/devices/search`   |
 
 ```ts
 const stores = await evotor.v1.account.getStores();
@@ -169,18 +179,18 @@ console.log(stores[0]?.name, stores[0]?.uuid);
 
 ### `v1.products` — products, documents, schemes and extras
 
-| Method                                        | Endpoint                                                    |
-| --------------------------------------------- | ----------------------------------------------------------- |
-| `getProducts(storeUuid)`                      | `GET /api/v1/inventories/stores/{storeUuid}/products`         |
-| `uploadProducts(storeUuid, products)`         | `POST /api/v1/inventories/stores/{storeUuid}/products`        |
-| `deleteProducts(storeUuid, products)`         | `POST /api/v1/inventories/stores/{storeUuid}/products/delete` |
-| `getDocuments(storeUuid, params?)`            | `GET /api/v1/inventories/stores/{storeUuid}/documents`        |
-| `getSchemes(storeUuid)`                       | `GET /api/v1/inventories/stores/{storeUuid}/products/schemes` |
-| `uploadSchemes(storeUuid, schemas)`           | `POST /api/v1/inventories/stores/{storeUuid}/products/schemes`|
-| `deleteSchemes(storeUuid, schemas)`           | `POST /api/v1/inventories/stores/{storeUuid}/products/schemes/delete` |
-| `getExtras(storeUuid)`                        | `GET /api/v1/inventories/stores/{storeUuid}/products/extras`  |
-| `uploadExtras(storeUuid, extras)`             | `POST /api/v1/inventories/stores/{storeUuid}/products/extras` |
-| `deleteExtras(storeUuid, extras)`             | `POST /api/v1/inventories/stores/{storeUuid}/products/extras/delete` |
+| Method                                | Endpoint                                                              |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| `getProducts(storeUuid)`              | `GET /api/v1/inventories/stores/{storeUuid}/products`                 |
+| `uploadProducts(storeUuid, products)` | `POST /api/v1/inventories/stores/{storeUuid}/products`                |
+| `deleteProducts(storeUuid, products)` | `POST /api/v1/inventories/stores/{storeUuid}/products/delete`         |
+| `getDocuments(storeUuid, params?)`    | `GET /api/v1/inventories/stores/{storeUuid}/documents`                |
+| `getSchemes(storeUuid)`               | `GET /api/v1/inventories/stores/{storeUuid}/products/schemes`         |
+| `uploadSchemes(storeUuid, schemas)`   | `POST /api/v1/inventories/stores/{storeUuid}/products/schemes`        |
+| `deleteSchemes(storeUuid, schemas)`   | `POST /api/v1/inventories/stores/{storeUuid}/products/schemes/delete` |
+| `getExtras(storeUuid)`                | `GET /api/v1/inventories/stores/{storeUuid}/products/extras`          |
+| `uploadExtras(storeUuid, extras)`     | `POST /api/v1/inventories/stores/{storeUuid}/products/extras`         |
+| `deleteExtras(storeUuid, extras)`     | `POST /api/v1/inventories/stores/{storeUuid}/products/extras/delete`  |
 
 ```ts
 // Загрузка товаров: при обновлении передаётся полный набор полей описания товара.
@@ -214,11 +224,11 @@ const documents = await evotor.v1.products.getDocuments(storeUuid, {
 });
 ```
 
-| Constraint                        | Meaning                                                                 |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| no dates                          | documents of the last month are returned                                 |
-| available range                   | documents not older than six months                                     |
-| max range per request             | one month                                                                |
+| Constraint            | Meaning                                  |
+| --------------------- | ---------------------------------------- |
+| no dates              | documents of the last month are returned |
+| available range       | documents not older than six months      |
+| max range per request | one month                                |
 
 ### `v1.ofd` — OFD data
 
@@ -238,11 +248,11 @@ const ofdDocuments = await evotor.v1.ofd.getDocuments("1111", {
 });
 ```
 
-| Method                 | Endpoint                        |
-| ---------------------- | ------------------------------- |
-| `getStores()`          | `GET /api/v1/ofd/stores`        |
-| `getDevices()`         | `GET /api/v1/ofd/devices`       |
-| `getDocuments(id, p)`  | `GET /api/v1/ofd/documents/{storeId}` |
+| Method                | Endpoint                              |
+| --------------------- | ------------------------------------- |
+| `getStores()`         | `GET /api/v1/ofd/stores`              |
+| `getDevices()`        | `GET /api/v1/ofd/devices`             |
+| `getDocuments(id, p)` | `GET /api/v1/ofd/documents/{storeId}` |
 
 > [!NOTE]
 > The OFD selection window cannot exceed **seven days**. Available document types: `SELL` and `Z_REPORT`.
@@ -265,86 +275,88 @@ if (paging.next_cursor !== undefined) {
 
 ### `v2.stores` — stores
 
-| Method              | Endpoint      |
-| ------------------- | ------------- |
-| `getStores(params?)`| `GET /stores` |
+| Method               | Endpoint      |
+| -------------------- | ------------- |
+| `getStores(params?)` | `GET /stores` |
 
 ### `v2.devices` — smart terminals
 
-| Method               | Endpoint      |
-| -------------------- | ------------- |
-| `getDevices(params?)`| `GET /devices` |
+| Method                | Endpoint       |
+| --------------------- | -------------- |
+| `getDevices(params?)` | `GET /devices` |
 
 ### `v2.employees` — employees
 
-| Method                        | Endpoint                          |
-| ----------------------------- | --------------------------------- |
-| `getEmployees(params?)`       | `GET /employees`                  |
-| `getEmployee(id)`             | `GET /employees/{employee-id}`    |
-| `getRoles()`                  | `GET /employees/roles`            |
-| `createEmployee(employee)`    | `POST /employees`                 |
-| `updateEmployee(id, employee)`| `PUT /employees/{employee-id}`    |
+| Method                         | Endpoint                       |
+| ------------------------------ | ------------------------------ |
+| `getEmployees(params?)`        | `GET /employees`               |
+| `getEmployee(id)`              | `GET /employees/{employee-id}` |
+| `getRoles()`                   | `GET /employees/roles`         |
+| `createEmployee(employee)`     | `POST /employees`              |
+| `updateEmployee(id, employee)` | `PUT /employees/{employee-id}` |
 
 ### `v2.documents` — documents
 
-| Method                                   | Endpoint                                        |
-| ---------------------------------------- | ----------------------------------------------- |
-| `getDocuments(storeId, params?)`         | `GET /stores/{store-id}/documents`              |
-| `getDocument(storeId, documentId)`       | `GET /stores/{store-id}/documents/{document-id}` |
-| `getDeviceDocuments(storeId, deviceId, p)`| `GET /stores/{store-id}/devices/{device-id}/documents` |
+| Method                                     | Endpoint                                               |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `getDocuments(storeId, params?)`           | `GET /stores/{store-id}/documents`                     |
+| `getDocument(storeId, documentId)`         | `GET /stores/{store-id}/documents/{document-id}`       |
+| `getDeviceDocuments(storeId, deviceId, p)` | `GET /stores/{store-id}/devices/{device-id}/documents` |
 
 ### `v2.products` — products and modifications
 
-| Method                                   | Endpoint                                            |
-| ---------------------------------------- | --------------------------------------------------- |
-| `getProducts(storeId, params?)`          | `GET /stores/{store-id}/products`                   |
-| `getProduct(storeId, productId)`         | `GET /stores/{store-id}/products/{product-id}`       |
-| `createProduct(storeId, product)`        | `POST /stores/{store-id}/products`                  |
-| `putProducts(storeId, products)`         | `PUT /stores/{store-id}/products`                   |
-| `putProduct(storeId, productId, product)`| `PUT /stores/{store-id}/products/{product-id}`       |
-| `patchProduct(storeId, productId, body)` | `PATCH /stores/{store-id}/products/{product-id}`     |
-| `deleteProducts(storeId, ids)`           | `DELETE /stores/{store-id}/products`                |
-| `deleteProduct(storeId, productId)`      | `DELETE /stores/{store-id}/products/{product-id}`    |
+| Method                                    | Endpoint                                          |
+| ----------------------------------------- | ------------------------------------------------- |
+| `getProducts(storeId, params?)`           | `GET /stores/{store-id}/products`                 |
+| `getProduct(storeId, productId)`          | `GET /stores/{store-id}/products/{product-id}`    |
+| `createProduct(storeId, product)`         | `POST /stores/{store-id}/products`                |
+| `createProducts(storeId, products)`       | `POST /stores/{store-id}/products` (bulk)         |
+| `putProducts(storeId, products)`          | `PUT /stores/{store-id}/products`                 |
+| `putProduct(storeId, productId, product)` | `PUT /stores/{store-id}/products/{product-id}`    |
+| `patchProduct(storeId, productId, body)`  | `PATCH /stores/{store-id}/products/{product-id}`  |
+| `deleteProducts(storeId, ids)`            | `DELETE /stores/{store-id}/products`              |
+| `deleteProduct(storeId, productId)`       | `DELETE /stores/{store-id}/products/{product-id}` |
 
 ### `v2.product_groups` — product groups
 
-| Method                                         | Endpoint                                                    |
-| ---------------------------------------------- | ----------------------------------------------------------- |
-| `getProductGroups(storeId, params?)`           | `GET /stores/{store-id}/product-groups`                      |
-| `getProductGroup(storeId, groupId)`            | `GET /stores/{store-id}/product-groups/{product-group-id}`   |
-| `createProductGroup(storeId, group)`           | `POST /stores/{store-id}/product-groups`                     |
-| `putProductGroups(storeId, groups)`            | `PUT /stores/{store-id}/product-groups`                      |
-| `putProductGroup(storeId, groupId, group)`     | `PUT /stores/{store-id}/product-groups/{product-group-id}`   |
-| `patchProductGroup(storeId, groupId, group)`   | `PATCH /stores/{store-id}/product-groups/{product-group-id}` |
-| `deleteProductGroups(storeId, ids)`            | `DELETE /stores/{store-id}/product-groups`                   |
-| `deleteProductGroup(storeId, groupId)`         | `DELETE /stores/{store-id}/product-groups/{product-group-id}`|
+| Method                                       | Endpoint                                                      |
+| -------------------------------------------- | ------------------------------------------------------------- |
+| `getProductGroups(storeId, params?)`         | `GET /stores/{store-id}/product-groups`                       |
+| `getProductGroup(storeId, groupId)`          | `GET /stores/{store-id}/product-groups/{product-group-id}`    |
+| `createProductGroup(storeId, group)`         | `POST /stores/{store-id}/product-groups`                      |
+| `createProductGroups(storeId, groups)`       | `POST /stores/{store-id}/product-groups` (bulk)               |
+| `putProductGroups(storeId, groups)`          | `PUT /stores/{store-id}/product-groups`                       |
+| `putProductGroup(storeId, groupId, group)`   | `PUT /stores/{store-id}/product-groups/{product-group-id}`    |
+| `patchProductGroup(storeId, groupId, group)` | `PATCH /stores/{store-id}/product-groups/{product-group-id}`  |
+| `deleteProductGroups(storeId, ids)`          | `DELETE /stores/{store-id}/product-groups`                    |
+| `deleteProductGroup(storeId, groupId)`       | `DELETE /stores/{store-id}/product-groups/{product-group-id}` |
 
 ### `v2.bulks` — bulk tasks
 
-| Method                | Endpoint            |
-| --------------------- | ------------------- |
-| `getBulks(params)`    | `GET /bulks`        |
-| `getBulk(id)`         | `GET /bulks/{bulk-id}` |
+| Method             | Endpoint               |
+| ------------------ | ---------------------- |
+| `getBulks(params)` | `GET /bulks`           |
+| `getBulk(id)`      | `GET /bulks/{bulk-id}` |
 
 ### `v2.push` — push notifications
 
-| Method                                     | Endpoint                                                          |
-| ------------------------------------------ | ----------------------------------------------------------------- |
-| `getPush(appId, pushId)`                   | `GET /api/apps/{application_id}/push-notifications/{push-id}`      |
-| `sendPush(appId, push)`                    | `POST /api/apps/{application_id}/push-notifications`               |
-| `sendPushToDevice(appId, deviceUuid, push)`| `POST /api/apps/{application_id}/devices/{device_uuid}/push-notifications` |
+| Method                                      | Endpoint                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| `getPush(appId, pushId)`                    | `GET /api/apps/{application_id}/push-notifications/{push-id}`              |
+| `sendPush(appId, push)`                     | `POST /api/apps/{application_id}/push-notifications`                       |
+| `sendPushToDevice(appId, deviceUuid, push)` | `POST /api/apps/{application_id}/devices/{device_uuid}/push-notifications` |
 
 ### `v2.events` — application events
 
-| Method                      | Endpoint                             |
-| --------------------------- | ------------------------------------ |
-| `getEvents(appId, params)`  | `GET /apps/{application_id}/events`   |
-| `getEvent(appId, eventId)`  | `GET /apps/{application_id}/events/{event_id}` |
+| Method                     | Endpoint                                       |
+| -------------------------- | ---------------------------------------------- |
+| `getEvents(appId, params)` | `GET /apps/{application_id}/events`            |
+| `getEvent(appId, eventId)` | `GET /apps/{application_id}/events/{event_id}` |
 
 ### Mass operations
 
-`putProducts` and `putProductGroups` are sent as mass operations — the `Content-Type` header gets the
-`+bulk` modifier, and the response contains a task that can be tracked with `v2.bulks`:
+`createProducts`, `putProducts`, `createProductGroups` and `putProductGroups` are sent as mass operations — the
+`Content-Type` header gets the `+bulk` modifier, and the response contains a task that can be tracked with `v2.bulks`:
 
 ```ts
 const task = await evotor.v2.products.putProducts(storeId, [
@@ -448,30 +460,46 @@ function handle<K extends keyof WebhookEventMap>(address: K, payload: WebhookEve
 }
 ```
 
-| Address                | Payload                     |
-| ---------------------- | --------------------------- |
-| `user.verify`          | `WebhookUserVerify`         |
-| `user.create`          | `WebhookUserCreate`         |
-| `user.token`           | `WebhookUserToken`          |
-| `commodities`          | `WebhookCommodity`          |
-| `inventories.stores`   | `WebhookStore[]`            |
-| `inventories.employees`| `WebhookEmployee[]`         |
-| `inventories.devices`  | `WebhookDevice[]`           |
-| `inventories.documents`| `WebhookDocument[]`         |
-| `receipts`             | `WebhookReceipt`            |
-| `subscription.event`   | `WebhookSubscriptionEvent`  |
-| `installation.event`   | `WebhookInstallationEvent`  |
+| Address                 | Payload                    |
+| ----------------------- | -------------------------- |
+| `user.verify`           | `WebhookUserVerify`        |
+| `user.create`           | `WebhookUserCreate`        |
+| `user.token`            | `WebhookUserToken`         |
+| `commodities`           | `WebhookCommodity`         |
+| `inventories.stores`    | `WebhookStore[]`           |
+| `inventories.employees` | `WebhookEmployee[]`        |
+| `inventories.devices`   | `WebhookDevice[]`          |
+| `inventories.documents` | `WebhookDocument[]`        |
+| `receipts`              | `WebhookReceipt`           |
+| `subscription.event`    | `WebhookSubscriptionEvent` |
+| `installation.event`    | `WebhookInstallationEvent` |
 
 ---
 
 ## ⏱️ Rate limits
 
-The client reads the `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers.
+The client reads the `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` and `Retry-After` response headers.
 
-When no requests are left, the next call waits until the window is reset.
+When no requests are left, the next call waits until the window is reset. The same happens when the API answers
+with `429` and `Retry-After` — the wait is applied to the next call, the failed one is reported as an error.
 Concurrent calls share a single timer, so the client never fires a burst of waiting requests.
 
-The limiter is transparent — there is nothing to configure and nothing to call.
+The limiter is transparent — there is nothing to configure and nothing to call. Each section (`v1`, `v2`, `ofd`)
+keeps its own limiter state, because Evotor counts limits per resource.
+
+### Documented API limits
+
+| Limit                              | Value                                            |
+| ---------------------------------- | ------------------------------------------------ |
+| Items per page (V2)                | 1000                                             |
+| Items per mass operation           | 1000 in the overview, 5000 on the endpoint pages |
+| Items in `DELETE ...?id=` (V2)     | 1000                                             |
+| Request body (V2)                  | 5 MB                                             |
+| Push notification payload          | 1900 characters                                  |
+| Devices per push notification      | 100                                              |
+| Push notifications per application | 100 per hour                                     |
+| V1 documents selection window      | 1 month per request, 6 months deep               |
+| OFD documents selection window     | 7 days                                           |
 
 ---
 
@@ -479,14 +507,19 @@ The limiter is transparent — there is nothing to configure and nothing to call
 
 The client throws a typed error depending on the response:
 
-| Error                | When                                                              |
-| -------------------- | ----------------------------------------------------------------- |
-| `AuthError`          | response status `401` or `403`                                    |
-| `NotInstalledError`  | response status `402` — the app is not installed on all devices    |
-| `ApiError`           | the response body contains an `errors` field or an array of errors |
-| `HttpError`          | any other HTTP error                                              |
+| Error               | When                                                                              |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `AuthError`         | response status `401` or `403`                                                    |
+| `NotInstalledError` | response status `402`                                                             |
+| `ApiError`          | the response body is a JSON object or array (V2 `{ code, message }`, `errors`, …) |
+| `HttpError`         | any other error, including a non-JSON body                                        |
 
-`AuthError`, `NotInstalledError` and `ApiError` carry the parsed response body in the `response` property.
+All errors carry `status` and the parsed body in `response` (`HttpError` keeps the raw text when the body is not JSON).
+`message` is built as `<status> <statusText>: <message from the body>`.
+
+> [!NOTE]
+> `402` means different things in the two versions: in V2 the application is not installed or not paid for on all
+> devices of the store, in V1 the user's subscription has expired. The error class is the same, the body tells them apart.
 
 ```ts
 import { ApiError, AuthError, HttpError, NotInstalledError } from "@shevernitskiy/evotor";
@@ -495,13 +528,13 @@ try {
   await evotor.v1.account.getStores();
 } catch (err) {
   if (err instanceof AuthError) {
-    console.error("Auth failed:", err.response);
+    console.error("Auth failed:", err.status, err.response);
   } else if (err instanceof NotInstalledError) {
-    console.error("Not installed:", err.response);
+    console.error("Not installed / not paid:", err.status, err.response);
   } else if (err instanceof ApiError) {
-    console.error("API error:", err.response);
+    console.error("API error:", err.status, err.response);
   } else if (err instanceof HttpError) {
-    console.error("HTTP error:", err.message);
+    console.error("HTTP error:", err.status, err.response);
   } else {
     console.error("Unknown error:", err);
   }
@@ -547,6 +580,35 @@ bun install
 bun test
 bun run typecheck
 ```
+
+---
+
+## ⚠️ Known limitations
+
+- **V2 document bodies are not discriminated by type.** `Document.body` is `Record<string, JSONValue>`; the shape of
+  `positions`, `payments`, `counterparties` and other fields depends on `type` and is described in the
+  [document schemes](https://developer.evotor.ru/docs/rest_api_scheme_documents.html). Narrow it in your code.
+- **V2 event payloads are not discriminated by type either.** `Event.payload` is `Record<string, JSONValue>`, and
+  `Event.action` is a union of the actions listed in the docs.
+- **V1 `Product` is one flat type.** The docs describe a separate schema per `type`; the library keeps all fields
+  optional so that a partial product can be sent, and leaves the required-field validation to the API.
+- **`MeasureName` accepts custom units** (`string & {}`), because Evotor allows product-accounting systems to use
+  their own units such as `пара` or `карат`.
+- **There is no typed webhook receiver.** The library only provides payload types (`WebhookEventMap`), and documents
+  arriving to a V2 webhook (`PUT /` with `id`, `close_date`, `body`) are not described yet — only the V1 format is.
+- **No automatic retries.** A `429` is reported as an error; the limiter only makes the _next_ call wait.
+- **V1 and V2 keep separate limiter state.** If you use both versions with the same token, the shared quota is not
+  tracked as a whole.
+
+### Where the Evotor docs contradict themselves
+
+- **Mass operation limit:** the overview says 1000 items, the endpoint pages say 5000.
+- **Push lifetime field:** the guide uses `active_until`, the reference example uses `active_untill`. The library
+  sends `active_until`.
+- **`product.type` in V1:** listed as required for `product`, but described as sent only when `group = false`.
+- **`quantityInPackage`** is camelCase in an otherwise snake_case V2 schema.
+- **`is_excisable`** mentions `BEER_MARKED` and `JUICE_MARKED`, which are absent from the `ProductType` list.
+- **The document webhook** shows a V2 body in the example and a V1 field table in the description.
 
 ---
 

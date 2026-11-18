@@ -97,6 +97,7 @@ describe("API Облака V2 — сотрудники", () => {
       phone: 79162869949,
       role_id: "role-1",
       name: "Иван",
+      last_name: "Иванов",
       stores: ["store-1"],
     });
 
@@ -107,6 +108,7 @@ describe("API Облака V2 — сотрудники", () => {
         phone: 79162869949,
         role_id: "role-1",
         name: "Иван",
+        last_name: "Иванов",
         stores: ["store-1"],
       }),
     );
@@ -180,12 +182,25 @@ describe("API Облака V2 — товары и группы товаров", 
 
     const evotor = new Evotor("test-token", { fetch: fetcher });
     const task = await evotor.v2.products.putProducts("s-1", [
-      { name: "Сидр", price: 123.12, measure_name: "шт", tax: "VAT_18", allow_to_sell: true },
+      { name: "Сидр", price: 123.12, measure_name: "шт", tax: "VAT_18", allow_to_sell: true, type: "NORMAL" },
     ]);
 
     expect(task.id).toBe("b-1");
     expect(calls[0]!.url).toBe("https://api.evotor.ru/stores/s-1/products");
     expect(calls[0]!.init?.method).toBe("PUT");
+    expect(header(calls[0]!.init, "Content-Type")).toBe("application/vnd.evotor.v2+bulk+json");
+  });
+
+  test("v2.products.createProducts создаёт несколько товаров массовой операцией", async () => {
+    const { fetcher, calls } = mockFetch(json({ id: "b-3", type: "product", status: "ACCEPTED" }));
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    await evotor.v2.products.createProducts("s-1", [
+      { name: "Сидр", price: 123.12, measure_name: "шт", tax: "VAT_18", allow_to_sell: true, type: "NORMAL" },
+    ]);
+
+    expect(calls[0]!.url).toBe("https://api.evotor.ru/stores/s-1/products");
+    expect(calls[0]!.init?.method).toBe("POST");
     expect(header(calls[0]!.init, "Content-Type")).toBe("application/vnd.evotor.v2+bulk+json");
   });
 
@@ -249,13 +264,136 @@ describe("API Облака V2 — задачи, push-уведомления и �
     const { fetcher, calls } = mockFetch(json({ items: [], paging: {} }));
 
     const evotor = new Evotor("test-token", { fetch: fetcher });
-    await evotor.v2.events.getEvents("app-1", { type: "Document", since: 1, until: 2 });
+    await evotor.v2.events.getEvents("app-1", { type: "Document", since: 1, until: 2, limit: 10 });
 
     const url = new URL(calls[0]!.url);
     expect(url.pathname).toBe("/apps/app-1/events");
     expect(url.searchParams.get("type")).toBe("Document");
     expect(url.searchParams.get("since")).toBe("1");
     expect(url.searchParams.get("until")).toBe("2");
+    expect(url.searchParams.get("limit")).toBe("10");
+  });
+});
+
+describe("API Облака V2 — остальные методы", () => {
+  const product: v2.Product = {
+    type: "NORMAL",
+    name: "Сидр",
+    price: 123.12,
+    measure_name: "шт",
+    tax: "VAT_18",
+    allow_to_sell: true,
+  };
+
+  test("v2.employees.getEmployees и getEmployee", async () => {
+    const employee: v2.Employee = {
+      id: "e-1",
+      name: "Иван",
+      stores: [],
+      role: "ADMIN",
+      role_id: "r-1",
+      user_id: "u-1",
+      created_at: "2024-01-01T00:00:00.000+0000",
+      updated_at: "2024-01-01T00:00:00.000+0000",
+    };
+    const { fetcher, calls } = mockFetch(json({ items: [employee], paging: {} }), json(employee));
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    expect((await evotor.v2.employees.getEmployees()).items).toEqual([employee]);
+    expect((await evotor.v2.employees.getEmployee("e/1")).id).toBe("e-1");
+
+    expect(calls[0]!.url).toBe("https://api.evotor.ru/employees");
+    expect(calls[1]!.url).toBe("https://api.evotor.ru/employees/e%2F1");
+  });
+
+  test("v2.documents.getDocument", async () => {
+    const { fetcher, calls } = mockFetch(json({ id: "d-1", type: "SELL" }));
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    await evotor.v2.documents.getDocument("s-1", "d-1");
+
+    expect(calls[0]!.url).toBe("https://api.evotor.ru/stores/s-1/documents/d-1");
+    expect(calls[0]!.init?.method).toBe("GET");
+  });
+
+  test("v2.products.getProduct, createProduct, putProduct и deleteProduct", async () => {
+    const { fetcher, calls } = mockFetch(
+      json(product),
+      json(product),
+      json(product),
+      new Response(null, { status: 204 }),
+    );
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    await evotor.v2.products.getProduct("s-1", "p-1");
+    await evotor.v2.products.createProduct("s-1", product);
+    await evotor.v2.products.putProduct("s-1", "p-1", product);
+    await evotor.v2.products.deleteProduct("s-1", "p-1");
+
+    expect(calls[0]!.url).toBe("https://api.evotor.ru/stores/s-1/products/p-1");
+    expect(calls[0]!.init?.method).toBe("GET");
+    expect(calls[1]!.url).toBe("https://api.evotor.ru/stores/s-1/products");
+    expect(calls[1]!.init?.method).toBe("POST");
+    expect(header(calls[1]!.init, "Content-Type")).toBe("application/vnd.evotor.v2+json");
+    expect(calls[2]!.init?.method).toBe("PUT");
+    expect(calls[3]!.init?.method).toBe("DELETE");
+  });
+
+  test("v2.product_groups — полный набор методов", async () => {
+    const group: v2.ProductGroup = { id: "g-1", name: "Группа" };
+    const { fetcher, calls } = mockFetch(
+      json({ items: [group], paging: {} }),
+      json(group),
+      json(group),
+      json(group),
+      json(group),
+      json({ id: "b-1", type: "product-group", status: "ACCEPTED" }),
+      new Response(null, { status: 204 }),
+      new Response(null, { status: 204 }),
+    );
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    await evotor.v2.product_groups.getProductGroups("s-1", { cursor: "cur" });
+    await evotor.v2.product_groups.getProductGroup("s-1", "g-1");
+    await evotor.v2.product_groups.createProductGroup("s-1", group);
+    await evotor.v2.product_groups.putProductGroup("s-1", "g-1", group);
+    await evotor.v2.product_groups.patchProductGroup("s-1", "g-1", { name: "Новое" });
+    await evotor.v2.product_groups.createProductGroups("s-1", [group]);
+    await evotor.v2.product_groups.deleteProductGroups("s-1", ["g-1", "g-2"]);
+    await evotor.v2.product_groups.deleteProductGroup("s-1", "g-1");
+
+    const base = "https://api.evotor.ru/stores/s-1/product-groups";
+    expect(calls[0]!.url).toBe(`${base}?cursor=cur`);
+    expect(calls[1]!.url).toBe(`${base}/g-1`);
+    expect(calls[2]!.init?.method).toBe("POST");
+    expect(calls[3]!.init?.method).toBe("PUT");
+    expect(calls[4]!.init?.method).toBe("PATCH");
+    expect(calls[4]!.init?.body).toBe(JSON.stringify({ name: "Новое" }));
+    expect(header(calls[5]!.init, "Content-Type")).toBe("application/vnd.evotor.v2+bulk+json");
+    expect(calls[6]!.url).toBe(`${base}?id=g-1%2Cg-2`);
+    expect(calls[7]!.init?.method).toBe("DELETE");
+  });
+
+  test("v2.bulks.getBulk, v2.push.getPush, v2.push.sendPush и v2.events.getEvent", async () => {
+    const push: v2.PushNotification = { id: "p-1", status: "ACCEPTED", modified_at: "2024-01-01", details: [] };
+    const { fetcher, calls } = mockFetch(
+      json({ id: "b-1", type: "product", status: "RUNNING" }),
+      json(push),
+      json(push),
+      json({ id: "ev-1", timestamp: 1, type: "Document", source: "DEVICE", action: "created", payload: {} }),
+    );
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+    await evotor.v2.bulks.getBulk("b/1");
+    await evotor.v2.push.getPush("app-1", "p-1");
+    await evotor.v2.push.sendPush("app-1", { devices: ["d-1"], payload: { type: "open" } });
+    await evotor.v2.events.getEvent("app-1", "ev-1");
+
+    expect(calls[0]!.url).toBe("https://api.evotor.ru/bulks/b%2F1");
+    expect(calls[1]!.url).toBe("https://api.evotor.ru/api/apps/app-1/push-notifications/p-1");
+    expect(calls[2]!.url).toBe("https://api.evotor.ru/api/apps/app-1/push-notifications");
+    expect(calls[2]!.init?.method).toBe("POST");
+    expect(calls[3]!.url).toBe("https://api.evotor.ru/apps/app-1/events/ev-1");
   });
 });
 
@@ -272,7 +410,7 @@ describe("API Облака V2 — ошибки", () => {
 
     const evotor = new Evotor("test-token", { fetch: fetcher });
 
-    expect(evotor.v2.stores.getStores()).rejects.toBeInstanceOf(NotInstalledError);
+    await expect(evotor.v2.stores.getStores()).rejects.toBeInstanceOf(NotInstalledError);
   });
 
   test("тело ошибки-массив выбрасывает ApiError", async () => {
@@ -281,6 +419,23 @@ describe("API Облака V2 — ошибки", () => {
 
     const evotor = new Evotor("test-token", { fetch: fetcher });
 
-    expect(evotor.v2.stores.getStores()).rejects.toBeInstanceOf(ApiError);
+    await expect(evotor.v2.stores.getStores()).rejects.toBeInstanceOf(ApiError);
+  });
+
+  test("тело ошибки-объект V2 сохраняется в ApiError", async () => {
+    const body = { code: "not_found", message: "документ не найден" };
+    const { fetcher } = mockFetch(json(body, { status: 404, statusText: "Not Found" }));
+
+    const evotor = new Evotor("test-token", { fetch: fetcher });
+
+    try {
+      await evotor.v2.documents.getDocument("s-1", "d-1");
+      throw new Error("Expected ApiError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).status).toBe(404);
+      expect((error as ApiError).response).toEqual(body);
+      expect((error as ApiError).message).toBe("404 Not Found: документ не найден");
+    }
   });
 });

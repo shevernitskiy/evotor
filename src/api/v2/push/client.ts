@@ -29,15 +29,15 @@ export class PushApi extends Endpoint {
    *
    * @param applicationId Идентификатор приложения в Облаке Эвотор.
    * @param push Данные уведомления.
-   * @param push.devices Идентификаторы смарт-терминалов, которым нужно передать уведомление.
+   * @param push.devices Идентификаторы смарт-терминалов, которым нужно передать уведомление. До 100 устройств.
    * @param push.active_until Дата и время, до которого уведомление остаётся активным. В документации Облака это поле указано как `active_untill`.
-   * @param push.payload Данные уведомления.
+   * @param push.payload Данные уведомления. Не более 1900 символов.
    */
   sendPush(
     applicationId: string,
     push: {
       devices?: string[];
-      active_until?: string;
+      active_until?: string | number;
       payload?: JSONValue;
     },
   ): Promise<PushNotification> {
@@ -56,13 +56,13 @@ export class PushApi extends Endpoint {
    * @param deviceUuid Идентификатор смарт-терминала или его IMEI.
    * @param push Данные уведомления.
    * @param push.active_until Дата и время, до которого уведомление остаётся активным.
-   * @param push.payload Данные уведомления.
+   * @param push.payload Данные уведомления. Не более 1900 символов.
    */
   sendPushToDevice(
     applicationId: string,
     deviceUuid: string,
     push: {
-      active_until?: string;
+      active_until?: string | number;
       payload?: JSONValue;
     },
   ): Promise<PushNotification> {

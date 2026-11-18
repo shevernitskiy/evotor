@@ -119,3 +119,47 @@ test("лимитер понимает reset как unix timestamp в секун�
 
   expect(sleeps).toEqual([60_000]);
 });
+
+test("лимитер понимает Retry-After в секундах", async () => {
+  const sleeps: number[] = [];
+  const now = 1_700_000_000_000;
+  const limiter = new RateLimiter({
+    now: () => now,
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+    },
+  });
+
+  limiter.update(new Headers({ "Retry-After": "3" }));
+
+  expect(limiter.state.remaining).toBe(0);
+
+  await limiter.wait();
+
+  expect(sleeps).toEqual([3000]);
+});
+
+test("лимитер понимает Retry-After как дату", async () => {
+  const sleeps: number[] = [];
+  const now = 1_700_000_000_000;
+  const limiter = new RateLimiter({
+    now: () => now,
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+    },
+  });
+
+  limiter.update(new Headers({ "Retry-After": new Date(now + 5000).toUTCString() }));
+
+  await limiter.wait();
+
+  expect(sleeps).toEqual([5000]);
+});
+
+test("некорректный Retry-After игнорируется", () => {
+  const limiter = new RateLimiter({ now: () => 1_700_000_000_000, sleep: async () => {} });
+
+  limiter.update(new Headers({ "Retry-After": "soon" }));
+
+  expect(limiter.state).toEqual({ limit: undefined, remaining: undefined, reset: undefined });
+});
